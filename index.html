@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kalimba Rhythm Trainer</title>
+<style>
+  :root {
+    --bg: #1a1a2e;
+    --surface: #16213e;
+    --surface2: #0f3460;
+    --accent: #e94560;
+    --accent2: #f5a623;
+    --green: #4ade80;
+    --text: #eee;
+    --text-dim: #999;
+    --kalimba-wood: #8B6914;
+    --kalimba-wood-light: #a67c2e;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+  }
+
+  header {
+    text-align: center;
+    padding: 20px 20px 10px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  header h1 {
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  header p {
+    color: var(--text-dim);
+    font-size: 0.9rem;
+    margin-top: 4px;
+  }
+
+  /* Controls */
+  .controls {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+    justify-content: center;
+    padding: 12px 20px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .controls button {
+    padding: 10px 24px;
+    border: none;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.2s;
+  }
+
+  .controls button:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+  }
+
+  .btn-start {
+    background: linear-gradient(135deg, var(--green), #22c55e);
+    color: #000;
+  }
+
+  .btn-stop {
+    background: linear-gradient(135deg, var(--accent), #dc2626);
+    color: #fff;
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+  }
+
+  .controls label {
+    font-size: 0.85rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .controls select, .controls input[type="range"] {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 6px 8px;
+    font-size: 0.85rem;
+  }
+
+  .controls input[type="range"] {
+    width: 100px;
+    accent-color: var(--accent);
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 8px 20px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .stat {
+    text-align: center;
+    background: var(--surface);
+    padding: 8px 16px;
+    border-radius: 8px;
+    min-width: 90px;
+  }
+
+  .stat .value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent2);
+  }
+
+  .stat .label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  /* Metronome */
+  .metronome {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    padding: 10px;
+  }
+
+  .metro-dot {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #333;
+    transition: background 0.08s, transform 0.08s;
+  }
+
+  .metro-dot.active {
+    background: var(--accent);
+    transform: scale(1.4);
+    box-shadow: 0 0 12px var(--accent);
+  }
+
+  /* Note display */
+  .note-hint {
+    text-align: center;
+    font-size: 1.3rem;
+    font-weight: 700;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+  }
+
+  .note-hint .current-note {
+    color: var(--accent2);
+    font-size: 1.5rem;
+    min-width: 60px;
+  }
+
+  .note-hint .feedback {
+    font-size: 0.9rem;
+    min-width: 80px;
+  }
+
+  .feedback.on-time { color: var(--green); }
+  .feedback.early { color: #fbbf24; }
+  .feedback.late { color: #f97316; }
+  .feedback.miss { color: var(--accent); }
+  .feedback.wrong-note { color: var(--accent); }
+
+  /* Kalimba keyboard */
+  .kalimba-container {
+    padding: 20px;
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .kalimba-body {
+    background: linear-gradient(180deg, #6b4f12, #8B6914, #7a5c10);
+    border-radius: 20px;
+    padding: 30px 20px 20px;
+    box-shadow: 0 8px 30px rgba(0,0,0,0.5), inset 0 2px 0 rgba(255,255,255,0.1);
+    position: relative;
+  }
+
+  .kalimba-body::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: radial-gradient(circle, #3a2a08, #2a1a05);
+    box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);
+  }
+
+  .keys-row {
+    display: flex;
+    gap: 6px;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+  }
+
+  .key {
+    width: 52px;
+    height: 120px;
+    border-radius: 8px 8px 4px 4px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 10px;
+    font-size: 0.7rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s, filter 0.1s;
+    position: relative;
+    user-select: none;
+  }
+
+  .key .note-name {
+    color: rgba(255,255,255,0.9);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+  }
+
+  .key .freq {
+    color: rgba(255,255,255,0.5);
+    font-size: 0.6rem;
+    font-weight: 400;
+  }
+
+  /* Key color coding */
+  .key[data-note="C4"] { background: linear-gradient(180deg, #f87171, #dc2626); }
+  .key[data-note="D4"] { background: linear-gradient(180deg, #fb923c, #ea580c); }
+  .key[data-note="E4"] { background: linear-gradient(180deg, #fbbf24, #d97706); }
+  .key[data-note="F4"] { background: linear-gradient(180deg, #a3e635, #65a30d); }
+  .key[data-note="G4"] { background: linear-gradient(180deg, #34d399, #059669); }
+  .key[data-note="A4"] { background: linear-gradient(180deg, #60a5fa, #2563eb); }
+  .key[data-note="B4"] { background: linear-gradient(180deg, #a78bfa, #7c3aed); }
+  .key[data-note="C5"] { background: linear-gradient(180deg, #f87171, #dc2626); }
+  .key[data-note="D5"] { background: linear-gradient(180deg, #fb923c, #ea580c); }
+  .key[data-note="E5"] { background: linear-gradient(180deg, #fbbf24, #d97706); }
+  .key[data-note="F5"] { background: linear-gradient(180deg, #a3e635, #65a30d); }
+  .key[data-note="G5"] { background: linear-gradient(180deg, #34d399, #059669); }
+  .key[data-note="A5"] { background: linear-gradient(180deg, #60a5fa, #2563eb); }
+  .key[data-note="B5"] { background: linear-gradient(180deg, #a78bfa, #7c3aed); }
+  .key[data-note="C6"] { background: linear-gradient(180deg, #f87171, #dc2626); }
+  .key[data-note="D6"] { background: linear-gradient(180deg, #fb923c, #ea580c); }
+  .key[data-note="E6"] { background: linear-gradient(180deg, #fbbf24, #d97706); }
+
+  .key.active {
+    transform: scaleY(0.92) translateY(4px);
+    filter: brightness(1.4);
+    box-shadow: 0 0 20px currentColor;
+  }
+
+  .key.highlight {
+    animation: pulse-hint 0.6s ease-in-out infinite alternate;
+  }
+
+  @keyframes pulse-hint {
+    from { filter: brightness(1); transform: scale(1); }
+    to { filter: brightness(1.3); transform: scale(1.05); }
+  }
+
+  /* Pattern display */
+  .pattern-display {
+    width: 100%;
+    max-width: 900px;
+    padding: 10px 20px;
+    text-align: center;
+  }
+
+  .pattern-notes {
+    display: flex;
+    gap: 4px;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 6px;
+  }
+
+  .pattern-note {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 600;
+    background: var(--surface);
+    color: var(--text-dim);
+    transition: all 0.15s;
+  }
+
+  .pattern-note.current {
+    background: var(--accent);
+    color: #fff;
+    transform: scale(1.15);
+    box-shadow: 0 0 10px var(--accent);
+  }
+
+  .pattern-note.done {
+    background: var(--green);
+    color: #000;
+  }
+
+  .pattern-note.wrong {
+    background: var(--accent);
+    color: #fff;
+    animation: shake 0.3s;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    25% { transform: translateX(-4px); }
+    75% { transform: translateX(4px); }
+  }
+
+  /* History */
+  .history {
+    width: 100%;
+    max-width: 900px;
+    padding: 10px 20px 30px;
+    max-height: 150px;
+    overflow-y: auto;
+  }
+
+  .history-title {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+
+  .history-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 4px 8px;
+    font-size: 0.8rem;
+    border-radius: 4px;
+  }
+
+  .history-item .hit-note {
+    font-weight: 700;
+    min-width: 40px;
+  }
+
+  .history-item .drift {
+    min-width: 70px;
+    font-weight: 600;
+  }
+
+  .history-item .drift.positive { color: #f97316; }
+  .history-item .drift.negative { color: #fbbf24; }
+  .history-item .drift.zero { color: var(--green); }
+
+  .history-item .verdict {
+    min-width: 80px;
+    text-align: right;
+  }
+
+  /* Mic status */
+  .mic-status {
+    font-size: 0.75rem;
+    padding: 4px 10px;
+    border-radius: 12px;
+  }
+
+  .mic-status.off { background: #333; color: #888; }
+  .mic-status.on { background: #065f46; color: var(--green); }
+  .mic-status.listening { background: #7f1d1d; color: var(--accent); animation: blink 1s infinite; }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+  }
+
+  /* Debug panel */
+  .debug-panel {
+    width: 100%;
+    max-width: 900px;
+    padding: 0 20px;
+  }
+
+  .debug-title {
+    font-size: 0.8rem;
+    color: var(--accent2);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .debug-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+  }
+
+  .debug-item {
+    background: var(--surface);
+    padding: 6px 10px;
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .debug-item.debug-full {
+    grid-column: 1 / -1;
+  }
+
+  .debug-label {
+    font-size: 0.65rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+
+  .debug-value {
+    font-size: 1rem;
+    font-weight: 700;
+    font-family: 'Courier New', monospace;
+  }
+
+  .debug-value.note-highlight {
+    color: var(--accent2);
+    font-size: 1.3rem;
+  }
+
+  #spectrumCanvas {
+    width: 100%;
+    height: 80px;
+    background: var(--surface);
+    border-radius: 6px;
+    margin-top: 4px;
+  }
+
+  /* Mic waveform viz */
+  .mic-viz {
+    width: 100%;
+    max-width: 900px;
+    padding: 0 20px;
+    height: 40px;
+  }
+
+  #waveformCanvas {
+    width: 100%;
+    height: 100%;
+    background: var(--surface);
+    border-radius: 6px;
+  }
+
+  /* Extra controls row */
+  .controls-extra {
+    display: flex;
+    gap: 16px;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 4px 20px;
+    width: 100%;
+    max-width: 900px;
+  }
+
+  .controls-extra label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .controls-extra select {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 4px 6px;
+    font-size: 0.8rem;
+  }
+
+  /* Level indicator */
+  .level-bar {
+    width: 100%;
+    max-width: 900px;
+    padding: 0 20px;
+  }
+
+  .level-track {
+    height: 6px;
+    background: var(--surface);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .level-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), var(--green));
+    border-radius: 3px;
+    transition: width 0.3s;
+  }
+
+  /* Responsive */
+  @media (max-width: 600px) {
+    .key { width: 38px; height: 90px; font-size: 0.6rem; }
+    .key .freq { display: none; }
+    .kalimba-body { padding: 20px 10px 15px; }
+    .keys-row { gap: 3px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🎵 Kalimba Rhythm Trainer</h1>
+  <p>Play along with the pattern — stay on time!</p>
+</header>
+
+<div class="controls">
+  <button class="btn-start" id="btnStart" onclick="startPractice()">▶ Start</button>
+  <button class="btn-stop" id="btnStop" onclick="stopPractice()" style="display:none">⏹ Stop</button>
+
+  <label>
+    BPM
+    <input type="range" id="bpmSlider" min="40" max="160" value="80" oninput="updateBPM(this.value)">
+    <span id="bpmVal">80</span>
+  </label>
+
+  <label>
+    Pattern
+    <select id="patternSelect" onchange="selectPattern(this.value)">
+      <option value="simple">Simple (4 beats)</option>
+      <option value="medium">Medium (8 beats)</option>
+      <option value="hard">Hard (12 beats)</option>
+      <option value="custom">Custom</option>
+    </select>
+  </label>
+
+  <label>
+    Threshold (dB)
+    <input type="range" id="sensSlider" min="-80" max="-20" value="-50" oninput="updateThreshold(this.value)">
+    <span id="threshVal">-50</span>
+  </label>
+
+  <span class="mic-status off" id="micStatus">🎤 Mic Off</span>
+  <button class="btn-secondary" onclick="testMic()" style="padding:6px 14px;font-size:0.8rem">🧪 Test Mic</button>
+</div>
+
+<div class="level-bar" style="margin-bottom:8px">
+  <div style="display:flex;justify-content:space-between;align-items:center;padding:0 4px">
+    <span style="font-size:0.7rem;color:var(--text-dim)">Mic Level</span>
+    <span style="font-size:0.75rem;font-weight:700;font-family:monospace" id="micLevelDb">— dB</span>
+  </div>
+  <div class="level-track" style="height:10px">
+    <div class="level-fill" id="micLevelFill" style="width:0%;transition:width 0.05s"></div>
+  </div>
+</div>
+
+<div class="debug-panel" id="debugPanel" style="display:none">
+  <div class="debug-title">🔍 Debug — What the mic hears</div>
+  <div class="debug-grid">
+    <div class="debug-item"><span class="debug-label">RMS Level</span><span class="debug-value" id="dbgRms">—</span></div>
+    <div class="debug-item"><span class="debug-label">Peak Freq</span><span class="debug-value" id="dbgFreq">—</span></div>
+    <div class="debug-item"><span class="debug-label">ZC Pitch</span><span class="debug-value" id="dbgZc">—</span></div>
+    <div class="debug-item"><span class="debug-label">Matched Note</span><span class="debug-value" id="dbgNote">—</span></div>
+    <div class="debug-item"><span class="debug-label">Peak Magnitude</span><span class="debug-value" id="dbgMag">—</span></div>
+    <div class="debug-item"><span class="debug-label">Threshold</span><span class="debug-value" id="dbgThresh">—</span></div>
+    <div class="debug-item debug-full"><span class="debug-label">Spectrum (dB)</span><canvas id="spectrumCanvas" width="800" height="80"></canvas></div>
+  </div>
+</div>
+
+<div class="mic-viz">
+  <canvas id="waveformCanvas"></canvas>
+</div>
+
+<div class="controls-extra">
+  <label><input type="checkbox" id="debugToggle" onchange="toggleDebug()"> Show debug</label>
+  <label>Detection mode:
+    <select id="detectMode" onchange="detectMode=this.options[this.selectedIndex].value">
+      <option value="autocorr">Autocorrelation (best)</option>
+      <option value="fft">FFT peak</option>
+      <option value="both">Both (pick best)</option>
+    </select>
+  </label>
+</div>
+
+<div class="level-bar">
+  <div class="level-track">
+    <div class="level-fill" id="levelFill" style="width: 0%"></div>
+  </div>
+</div>
+
+<div class="stats-bar">
+  <div class="stat">
+    <div class="value" id="statAccuracy">—</div>
+    <div class="label">Accuracy</div>
+  </div>
+  <div class="stat">
+    <div class="value" id="statAvgDrift">—</div>
+    <div class="label">Avg Drift</div>
+  </div>
+  <div class="stat">
+    <div class="value" id="statOnTime">—</div>
+    <div class="label">On Time</div>
+  </div>
+  <div class="stat">
+    <div class="value" id="statStreak">0</div>
+    <div class="label">Streak</div>
+  </div>
+  <div class="stat">
+    <div class="value" id="statTotal">0</div>
+    <div class="label">Hits</div>
+  </div>
+</div>
+
+<div class="metronome" id="metronome"></div>
+
+<div class="note-hint">
+  <span>Next:</span>
+  <span class="current-note" id="currentNote">—</span>
+  <span class="feedback" id="feedback"></span>
+</div>
+
+<div class="pattern-display">
+  <div class="pattern-notes" id="patternNotes"></div>
+</div>
+
+<div class="kalimba-container">
+  <div class="kalimba-body">
+    <div class="keys-row" id="kalimbaKeys"></div>
+  </div>
+</div>
+
+<div class="history">
+  <div class="history-title">Hit History</div>
+  <div id="historyList"></div>
+</div>
+
+<script>
+// ── Kalimba C Major 17-key frequencies ──
+const KALIMBA_NOTES = [
+  { note: 'C4', freq: 261.63 },
+  { note: 'D4', freq: 293.66 },
+  { note: 'E4', freq: 329.63 },
+  { note: 'F4', freq: 349.23 },
+  { note: 'G4', freq: 392.00 },
+  { note: 'A4',  freq: 440.00 },
+  { note: 'B4',  freq: 493.88 },
+  { note: 'C5',  freq: 523.25 },
+  { note: 'D5',  freq: 587.33 },
+  { note: 'E5',  freq: 659.25 },
+  { note: 'F5',  freq: 698.46 },
+  { note: 'G5',  freq: 783.99 },
+  { note: 'A5',  freq: 880.00 },
+  { note: 'B5',  freq: 987.77 },
+  { note: 'C6',  freq: 1046.50 },
+  { note: 'D6',  freq: 1174.66 },
+  { note: 'E6',  freq: 1318.51 },
+];
+
+// ── Patterns ──
+const PATTERNS = {
+  simple: ['C4','D4','E4','F4','G4','F4','E4','D4'],
+  medium: ['C4','E4','G4','C5','G4','E4','C4','D4','F4','A4','D5','A4','F4','D4','C4','G4'],
+  hard:   ['C4','E4','G4','C5','E5','G4','E4','C4','D4','F4','A4','D5','F5','A4','F4','D4','E4','G4','B4','E5','G5','B4','G4','E4','C4','D4','F4','C5','F4','D4','C4'],
+  custom: ['C4','C4','E4','E4','F4','F4','E4','E4','D4','D4','C4','C4'],
+};
+
+// ── State ──
+let audioCtx = null;
+let analyser = null;
+let micStream = null;
+let micSource = null;
+let animFrame = null;
+let isRunning = false;
+let bpm = 80;
+let currentPattern = PATTERNS.simple;
+let patternIndex = 0;
+let beatStartTime = 0;
+let notes = [];
+let stats = { hits: 0, onTime: 0, totalDrift: 0, streak: 0, bestStreak: 0 };
+let metronomeIndex = 0;
+let metronomeInterval = null;
+let lastDetectedNote = null;
+let lastDetectTime = 0;
+let cooldownMs = 150;
+let detectMode = 'autocorr';
+let thresholdDb = -50;
+let rawBuffer = null; // time-domain buffer for waveform
+let prevRawBuffer = null; // for autocorrelation (avoids realloc)
+let lastPitch = 0;
+let pitchConfidence = 0;
+let noteCooldown = 0;
+let rmsHistory = new Array(20).fill(-100); // rolling RMS for noise floor
+
+// ── Audio ──
+function initAudio() {
+  if (audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function playNote(freq, duration = 0.8) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  const filter = audioCtx.createBiquadFilter();
+
+  // Warm kalimba-like tone: triangle + slight harmonics
+  osc.type = 'triangle';
+  osc.frequency.value = freq;
+
+  // Add slight detune for warmth
+  const osc2 = audioCtx.createOscillator();
+  osc2.type = 'sine';
+  osc2.frequency.value = freq * 2.0; // octave harmonic
+  const gain2 = audioCtx.createGain();
+  gain2.gain.value = 0.15;
+  osc2.connect(gain2);
+  gain2.connect(filter);
+
+  filter.type = 'lowpass';
+  filter.frequency.value = 2000;
+  filter.Q.value = 1;
+
+  gain.gain.setValueAtTime(0.5, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+
+  osc.connect(gain);
+  gain.connect(filter);
+  filter.connect(audioCtx.destination);
+
+  osc.start();
+  osc2.start();
+  osc.stop(audioCtx.currentTime + duration);
+  osc2.stop(audioCtx.currentTime + duration);
+}
+
+function playClick(freq = 800, dur = 0.05) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.value = freq;
+  gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime + dur);
+}
+
+// ── Microphone ──
+async function startMic() {
+  try {
+    console.log('[Kalimba] Requesting mic access...');
+
+    // Try without autoGainControl first — it often kills quiet sounds
+    let constraints = {
+      audio: {
+        echoCancellation: false,
+        noiseSuppression: false,
+        autoGainControl: false,
+        channelCount: 1,
+      }
+    };
+
+    try {
+      micStream = await navigator.mediaDevices.getUserMedia(constraints);
+    } catch (e2) {
+      console.log('[Kalimba] First attempt failed, trying without constraints:', e2.message);
+      micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    }
+
+    console.log('[Kalimba] Mic granted! Tracks:', micStream.getTracks().map(t => t.label));
+    console.log('[Kalimba] Sample rate:', audioCtx.sampleRate);
+
+    // Check if the mic is actually active
+    const track = micStream.getAudioTracks()[0];
+    console.log('[Kalimba] Track enabled:', track.enabled, 'state:', track.readyState);
+
+    micSource = audioCtx.createMediaStreamSource(micStream);
+
+    // Use ScriptProcessor for raw time-domain access
+    const bufferSize = 4096;
+    rawBuffer = new Float32Array(bufferSize);
+    prevRawBuffer = new Float32Array(bufferSize);
+    let frameCount = 0;
+
+    const scriptNode = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+    scriptNode.onaudioprocess = (e) => {
+      frameCount++;
+      const input = e.inputBuffer.getChannelData(0);
+      for (let i = 0; i < input.length; i++) {
+        rawBuffer[i] = input[i];
+        prevRawBuffer[i] = rawBuffer[i];
+      }
+    };
+
+    // Also keep analyser for FFT-based detection & spectrum display
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.0;
+    micSource.connect(analyser);
+
+    // ScriptProcessor: connect AFTER analyser so it also receives data
+    // Don't connect to destination to avoid feedback
+    micSource.connect(scriptNode);
+
+    // Set up waveform canvas
+    const wc = document.getElementById('waveformCanvas');
+    if (wc) {
+      wc.width = wc.offsetWidth * 2 || 1600;
+      wc.height = 80;
+    }
+
+    updateMicStatus('listening');
+    detectLoop();
+
+    // Log after 2 seconds to confirm data is flowing
+    setTimeout(() => {
+      let sum = 0;
+      for (let i = 0; i < rawBuffer.length; i++) sum += rawBuffer[i] * rawBuffer[i];
+      const rms = Math.sqrt(sum / rawBuffer.length);
+      const rmsDb = rms > 0 ? 20 * Math.log10(rms) : -100;
+      console.log(`[Kalimba] After 2s: frames=${frameCount}, rawRMS=${rms.toFixed(6)}, dB=${rmsDb.toFixed(1)}, frameCount=${frameCount}`);
+
+      if (rms < 0.001) {
+        console.warn('[Kalimba] WARNING: Mic signal is extremely quiet! Check your input device.');
+        // Try with autoGainControl as fallback
+        console.log('[Kalimba] Retrying with autoGainControl enabled...');
+        stopMic();
+        constraints.audio.autoGainControl = true;
+        navigator.mediaDevices.getUserMedia(constraints).then((stream2) => {
+          console.log('[Kalimba] Retry succeeded with autoGainControl');
+          micStream = stream2;
+          micSource = audioCtx.createMediaStreamSource(micStream);
+          micSource.connect(scriptNode);
+          micSource.connect(analyser);
+          updateMicStatus('listening');
+          detectLoop();
+        });
+      }
+    }, 2500);
+
+  } catch (e) {
+    console.error('[Kalimba] Mic error:', e);
+    updateMicStatus('error');
+    alert('Could not access microphone: ' + e.message + '\n\nCheck that your browser has mic permission and select the correct input device.');
+  }
+}
+
+function stopMic() {
+  if (micStream) {
+    micStream.getTracks().forEach(t => t.stop());
+    micStream = null;
+  }
+  if (micSource) {
+    micSource.disconnect();
+    micSource = null;
+  }
+  if (analyser) {
+    analyser.disconnect();
+    analyser = null;
+  }
+  if (animFrame) {
+    cancelAnimationFrame(animFrame);
+    animFrame = null;
+  }
+  updateMicStatus('off');
+}
+
+let micTestRunning = false;
+function testMic() {
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  if (micTestRunning) {
+    micTestRunning = false;
+    stopMic();
+    document.getElementById('micStatus').textContent = '🎤 Mic Off';
+    document.getElementById('micStatus').className = 'mic-status off';
+    return;
+  }
+
+  micTestRunning = true;
+  navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } })
+    .then((stream) => {
+      micStream = stream;
+      const track = stream.getAudioTracks()[0];
+      console.log('[Test] Mic track:', track.label, 'enabled:', track.enabled, 'state:', track.readyState);
+
+      micSource = audioCtx.createMediaStreamSource(stream);
+
+      // Use ScriptProcessor
+      const bufferSize = 1024;
+      rawBuffer = new Float32Array(bufferSize);
+      const scriptNode = audioCtx.createScriptProcessor(bufferSize, 1, 1);
+      scriptNode.onaudioprocess = (e) => {
+        const input = e.inputBuffer.getChannelData(0);
+        for (let i = 0; i < input.length; i++) rawBuffer[i] = input[i];
+      };
+      micSource.connect(scriptNode);
+
+      // Also analyser
+      analyser = audioCtx.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.0;
+      micSource.connect(analyser);
+
+      updateMicStatus('listening');
+
+      // Start a quick test loop
+      let count = 0;
+      function testLoop() {
+        if (!micTestRunning) return;
+        count++;
+
+        let sum = 0;
+        for (let i = 0; i < rawBuffer.length; i++) sum += rawBuffer[i] * rawBuffer[i];
+        const rms = Math.sqrt(sum / rawBuffer.length);
+        const rmsDb = rms > 0 ? 20 * Math.log10(rms) : -100;
+
+        // Update mic level meter
+        const levelPct = Math.min(100, Math.max(0, (rmsDb + 80) / 80 * 100));
+        const levelFill = document.getElementById('micLevelFill');
+        const levelDb = document.getElementById('micLevelDb');
+        if (levelFill) levelFill.style.width = levelPct + '%';
+        if (levelDb) levelDb.textContent = rmsDb.toFixed(0) + ' dB';
+
+        // Draw waveform
+        drawWaveform();
+
+        // Log every 30 frames (~0.5s)
+        if (count % 30 === 0) {
+          console.log(`[Test] Frame ${count}: RMS=${rms.toFixed(6)}, dB=${rmsDb.toFixed(1)}`);
+          if (rms < 0.001 && count > 100) {
+            console.warn('[Test] No signal detected after several seconds!');
+            console.warn('[Test] Try: 1) Clicking the mic indicator in browser bar to select different input device');
+            console.warn('[Test] 2) Checking system sound settings for input volume');
+            console.warn('[Test] 3) Using a different browser');
+          }
+        }
+
+        animFrame = requestAnimationFrame(testLoop);
+      }
+      testLoop();
+    })
+    .catch((e) => {
+      console.error('[Test] Mic error:', e);
+      alert('Could not access microphone: ' + e.message);
+      micTestRunning = false;
+    });
+}
+
+function updateThreshold(val) {
+  thresholdDb = parseInt(val);
+  document.getElementById('threshVal').textContent = val;
+}
+
+function toggleDebug() {
+  const panel = document.getElementById('debugPanel');
+  panel.style.display = document.getElementById('debugToggle').checked ? 'block' : 'none';
+}
+
+// ── Autocorrelation pitch detection (Yin-like) ──
+// Much better than FFT for monophonic instruments like Kalimba
+function autocorrelationPitch(buf, sampleRate) {
+  const N = buf.length;
+
+  // Compute RMS to check if there's actually sound
+  let sum = 0;
+  for (let i = 0; i < N; i++) sum += buf[i] * buf[i];
+  const rms = Math.sqrt(sum / N);
+
+  if (rms < 0.005) return { pitch: 0, rms: rms, confidence: 0 };
+
+  // Normalize
+  let mean = 0;
+  for (let i = 0; i < N; i++) mean += buf[i];
+  mean /= N;
+
+  // Auto-correlation
+  const minPeriod = Math.floor(sampleRate / 2000); // max 2000 Hz
+  const maxPeriod = Math.floor(sampleRate / 60);   // min 60 Hz
+  const actualMax = Math.min(maxPeriod, N / 2);
+
+  let bestCorr = -1;
+  let bestLag = 0;
+
+  for (let lag = minPeriod; lag < actualMax; lag++) {
+    let corr = 0;
+    let sumSq1 = 0, sumSq2 = 0;
+    for (let i = 0; i < N - lag; i++) {
+      const a = buf[i] - mean;
+      const b = buf[i + lag] - mean;
+      corr += a * b;
+      sumSq1 += a * a;
+      sumSq2 += b * b;
+    }
+    const denom = Math.sqrt(sumSq1 * sumSq2);
+    const normalized = denom > 0 ? corr / denom : 0;
+
+    if (normalized > bestCorr) {
+      bestCorr = normalized;
+      bestLag = lag;
+    }
+  }
+
+  // Parabolic interpolation for sub-sample accuracy
+  if (bestLag > 0 && bestLag < N - 1) {
+    let left = 0, right = 0;
+    let corrL = 0, corrR = 0;
+    // Find correlation at lag-1
+    let sumSq1L = 0, sumSq2L = 0;
+    for (let i = 0; i < N - (bestLag - 1); i++) {
+      const a = buf[i] - mean;
+      const b = buf[i + bestLag - 1] - mean;
+      corrL += a * b;
+      sumSq1L += a * a;
+      sumSq2L += b * b;
+    }
+    left = sumSq1L > 0 && sumSq2L > 0 ? corrL / Math.sqrt(sumSq1L * sumSq2L) : 0;
+
+    let sumSq1R = 0, sumSq2R = 0;
+    for (let i = 0; i < N - (bestLag + 1); i++) {
+      const a = buf[i] - mean;
+      const b = buf[i + bestLag + 1] - mean;
+      corrR += a * b;
+      sumSq1R += a * a;
+      sumSq2R += b * b;
+    }
+    right = sumSq1R > 0 && sumSq2R > 0 ? corrR / Math.sqrt(sumSq1R * sumSq2R) : 0;
+
+    const shift = 0.5 * (left - right) / (left - 2 * bestCorr + right);
+    bestLag += shift;
+  }
+
+  const pitch = bestLag > 0 ? sampleRate / bestLag : 0;
+  const confidence = bestCorr;
+
+  return { pitch, rms, confidence };
+}
+
+// ── FFT-based pitch detection (fallback) ──
+function fftPitch(dataArray, sampleRate) {
+  const bufferLength = dataArray.length;
+  let bestFreq = 0;
+  let bestMag = -Infinity;
+
+  // Only look in the Kalimba-relevant range
+  const minBin = Math.ceil(150 * bufferLength / sampleRate);
+  const maxBin = Math.floor(2000 * bufferLength / sampleRate);
+
+  for (let i = minBin; i < maxBin; i++) {
+    if (dataArray[i] > bestMag) {
+      bestMag = dataArray[i];
+      bestFreq = i * sampleRate / bufferLength;
+    }
+  }
+
+  // Find harmonic: the strongest frequency whose 2nd harmonic is also strong
+  // This helps distinguish fundamentals from overtones
+  let fundamental = bestFreq;
+  let fundamentalMag = bestMag;
+
+  for (let i = minBin; i < maxBin; i++) {
+    const freq = i * sampleRate / bufferLength;
+    const mag = dataArray[i];
+    // Check if there's a harmonic at 2x
+    const harmBin = Math.round(2 * i);
+    if (harmBin < maxBin && dataArray[harmBin] > mag - 10) {
+      // This frequency has a strong harmonic — it's likely the fundamental
+      if (mag > fundamentalMag) {
+        fundamental = freq;
+        fundamentalMag = mag;
+      }
+    }
+  }
+
+  return { pitch: fundamental, mag: fundamentalMag };
+}
+
+// ── Main detection loop ──
+function detectLoop() {
+  if (!isRunning) return;
+
+  const now = performance.now();
+
+  // Get time-domain data
+  const buf = rawBuffer;
+  const sampleRate = audioCtx.sampleRate;
+
+  // Compute RMS
+  let sum = 0;
+  for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
+  const rms = Math.sqrt(sum / buf.length);
+  const rmsDb = rms > 0 ? 20 * Math.log10(rms) : -100;
+
+  // Update mic level meter (every frame)
+  const levelPct = Math.min(100, Math.max(0, (rmsDb + 80) / 80 * 100));
+  const levelFill = document.getElementById('micLevelFill');
+  const levelDb = document.getElementById('micLevelDb');
+  if (levelFill) levelFill.style.width = levelPct + '%';
+  if (levelDb) levelDb.textContent = rmsDb.toFixed(0) + ' dB';
+
+  // Color the level bar
+  if (levelFill) {
+    if (rmsDb < -50) levelFill.style.background = '#333';
+    else if (rmsDb < -30) levelFill.style.background = 'var(--green)';
+    else if (rmsDb < -15) levelFill.style.background = 'var(--accent2)';
+    else levelFill.style.background = 'var(--accent)';
+  }
+
+  if (now - noteCooldown < cooldownMs) {
+    drawWaveform();
+    updateDebugDisplay({ pitch: lastPitch, rms: rms, rmsDb: rmsDb, confidence: pitchConfidence, fftFreq: 0, fftMag: -Infinity });
+    animFrame = requestAnimationFrame(detectLoop);
+    return;
+  }
+
+  // Rolling RMS for noise floor estimation
+  rmsHistory.push(rmsDb);
+  rmsHistory.shift();
+  const noiseFloor = Math.min(...rmsHistory);
+
+  // Check if signal is above noise floor + threshold
+  const signalAboveNoise = rmsDb > noiseFloor + 6;
+  const signalAboveThreshold = rmsDb > thresholdDb;
+
+  if (!signalAboveNoise && !signalAboveThreshold) {
+    lastPitch = 0;
+    drawWaveform();
+    updateDebugDisplay({ pitch: 0, rms: rms, rmsDb: rmsDb, confidence: 0, fftFreq: 0, fftMag: -Infinity });
+    animFrame = requestAnimationFrame(detectLoop);
+    return;
+  }
+
+  // Autocorrelation pitch
+  const acResult = autocorrelationPitch(buf, sampleRate);
+
+  // FFT pitch
+  const freqData = new Float32Array(analyser.frequencyBinCount);
+  analyser.getFloatFrequencyData(freqData);
+  const fftResult = fftPitch(freqData, sampleRate);
+
+  // Combine: use autocorrelation by default, or pick the best
+  let detectedPitch;
+  if (detectMode === 'autocorr') {
+    detectedPitch = acResult.pitch;
+  } else if (detectMode === 'fft') {
+    detectedPitch = fftResult.pitch;
+  } else {
+    // 'both': pick whichever has better confidence
+    if (acResult.confidence > 0.5 && acResult.pitch > 60) {
+      detectedPitch = acResult.pitch;
+    } else if (fftResult.pitch > 60 && fftResult.mag > thresholdDb) {
+      detectedPitch = fftResult.pitch;
+    } else {
+      detectedPitch = acResult.pitch;
+    }
+  }
+
+  // Debounce: only update if significantly different
+  if (detectedPitch > 0 && lastPitch > 0) {
+    const ratio = detectedPitch / lastPitch;
+    if (ratio > 0.8 && ratio < 1.25) {
+      // Same note, smooth the pitch
+      detectedPitch = detectedPitch * 0.7 + lastPitch * 0.3;
+    }
+  }
+
+  lastPitch = detectedPitch;
+  pitchConfidence = acResult.confidence;
+
+  // Check if this is a new note hit
+  if (detectedPitch > 60 && now - lastDetectTime > cooldownMs) {
+    const matchedNote = findClosestNote(detectedPitch);
+    if (matchedNote) {
+      onNoteHit(matchedNote, detectedPitch);
+      lastDetectTime = now;
+      noteCooldown = now + cooldownMs;
+    }
+  }
+
+  // Update debug
+  updateDebugDisplay({
+    pitch: detectedPitch,
+    rms: rms,
+    rmsDb: rmsDb,
+    confidence: acResult.confidence,
+    fftFreq: fftResult.pitch,
+    fftMag: fftResult.mag,
+    noiseFloor: noiseFloor,
+    spectrum: freqData,
+    sampleRate: sampleRate,
+  });
+
+  drawWaveform();
+  animFrame = requestAnimationFrame(detectLoop);
+}
+
+function findClosestNote(freq) {
+  let best = null;
+  let bestDist = Infinity;
+  for (const n of KALIMBA_NOTES) {
+    const dist = Math.abs(freq - n.freq) / n.freq;
+    if (dist < bestDist) {
+      bestDist = dist;
+      best = n;
+    }
+  }
+  // Tolerance: within 6% of target frequency (Kalimbas can be slightly out of tune)
+  if (bestDist < 0.06) {
+    return best;
+  }
+  return null;
+}
+
+// ── Debug display ──
+function updateDebugDisplay(data) {
+  document.getElementById('dbgRms').textContent = data.rmsDb !== undefined ? data.rmsDb.toFixed(1) + ' dB' : (data.rms ? data.rms.toFixed(4) : '—');
+  document.getElementById('dbgFreq').textContent = data.fftFreq ? data.fftFreq.toFixed(1) + ' Hz' : '—';
+  document.getElementById('dbgZc').textContent = data.pitch ? data.pitch.toFixed(1) + ' Hz' : '—';
+
+  const noteEl = document.getElementById('dbgNote');
+  if (data.pitch && data.pitch > 60) {
+    const n = findClosestNote(data.pitch);
+    if (n) {
+      noteEl.textContent = n.note + ' (' + n.freq + 'Hz)';
+      noteEl.className = 'debug-value note-highlight';
+    } else {
+      noteEl.textContent = data.pitch.toFixed(0) + ' Hz (no match)';
+      noteEl.className = 'debug-value';
+    }
+  } else {
+    noteEl.textContent = '—';
+    noteEl.className = 'debug-value';
+  }
+
+  document.getElementById('dbgMag').textContent = data.fftMag ? data.fftMag.toFixed(1) + ' dB' : '—';
+  document.getElementById('dbgThresh').textContent = thresholdDb + ' dB';
+
+  // Draw spectrum
+  if (data.spectrum && data.sampleRate) {
+    drawSpectrum(data.spectrum, data.sampleRate);
+  }
+}
+
+function drawSpectrum(freqData, sampleRate) {
+  const canvas = document.getElementById('spectrumCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.fillStyle = '#16213e';
+  ctx.fillRect(0, 0, w, h);
+
+  // Draw frequency bins
+  const minBin = Math.ceil(100 * freqData.length / sampleRate);
+  const maxBin = Math.floor(2000 * freqData.length / sampleRate);
+  const range = maxBin - minBin;
+
+  for (let i = minBin; i < maxBin; i++) {
+    const mag = freqData[i];
+    const normalized = (mag + 100) / 100; // map -100..0 to 0..1
+    const barH = Math.max(1, normalized * h);
+    const x = ((i - minBin) / range) * w;
+    const barW = Math.max(1, w / range);
+
+    // Color by magnitude
+    const r = Math.min(255, Math.floor(255 * (1 - normalized)));
+    const g = Math.min(255, Math.floor(255 * normalized));
+    ctx.fillStyle = `rgb(${r},${g},60)`;
+    ctx.fillRect(x, h - barH, barW, barH);
+  }
+
+  // Draw Kalimba note markers
+  ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+  ctx.lineWidth = 1;
+  for (const n of KALIMBA_NOTES) {
+    const bin = n.freq * freqData.length / sampleRate;
+    if (bin >= minBin && bin <= maxBin) {
+      const x = ((bin - minBin) / range) * w;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+    }
+  }
+}
+
+function drawWaveform() {
+  const canvas = document.getElementById('waveformCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width;
+  const h = canvas.height;
+
+  ctx.fillStyle = '#16213e';
+  ctx.fillRect(0, 0, w, h);
+
+  // Draw center line
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, h / 2);
+  ctx.lineTo(w, h / 2);
+  ctx.stroke();
+
+  // Draw waveform
+  if (rawBuffer && rawBuffer.length > 0) {
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    const step = Math.max(1, rawBuffer.length / w);
+    for (let i = 0; i < w; i++) {
+      const idx = Math.floor(i * step);
+      const val = rawBuffer[idx] || 0;
+      const y = h / 2 + val * h * 0.4;
+      if (i === 0) ctx.moveTo(i, y);
+      else ctx.lineTo(i, y);
+    }
+    ctx.stroke();
+  }
+}
+
+function onNoteHit(matchedNote, detectedFreq) {
+  lastDetectedNote = matchedNote.note;
+
+  // Visual: flash key
+  flashKey(matchedNote.note);
+
+  // Play sound for feedback
+  playNote(matchedNote.freq, 0.5);
+
+  if (!isRunning) return;
+
+  // Check timing
+  const expectedNote = currentPattern[patternIndex];
+  const now = performance.now();
+  const elapsed = now - beatStartTime;
+  const beatDuration = 60000 / bpm;
+  const drift = elapsed - beatDuration * patternIndex;
+
+  // Check if it's the right note
+  if (matchedNote.note === expectedNote) {
+    const absDrift = Math.abs(drift);
+    let verdict, cls;
+
+    if (absDrift < 100) {
+      verdict = 'PERFECT!';
+      cls = 'on-time';
+      stats.onTime++;
+      stats.streak++;
+      if (stats.streak > stats.bestStreak) stats.bestStreak = stats.streak;
+    } else if (absDrift < 200) {
+      verdict = drift < 0 ? 'Early ✓' : 'Late ✓';
+      cls = 'early';
+      stats.streak = Math.max(0, stats.streak - 1);
+    } else if (absDrift < 350) {
+      verdict = drift < 0 ? 'Early' : 'Late';
+      cls = 'late';
+      stats.streak = 0;
+    } else {
+      verdict = 'Miss (off-beat)';
+      cls = 'miss';
+      stats.streak = 0;
+    }
+
+    stats.hits++;
+    stats.totalDrift += drift;
+    stats.totalDrift = Math.round(stats.totalDrift);
+
+    showFeedback(verdict, cls);
+    markPatternNote(patternIndex, 'done');
+    addHistory(matchedNote.note, drift, verdict);
+    patternIndex++;
+
+    if (patternIndex >= currentPattern.length) {
+      // Pattern complete!
+      showFeedback('🎉 Pattern Complete!', 'on-time');
+      setTimeout(() => {
+        if (isRunning) {
+          resetPattern();
+        }
+      }, 1500);
+    }
+  } else {
+    // Wrong note
+    const verdict = `Wrong note (${matchedNote.note})`;
+    showFeedback(verdict, 'wrong-note');
+    markPatternNote(patternIndex, 'wrong');
+    stats.streak = 0;
+    addHistory(matchedNote.note, 0, verdict);
+    setTimeout(() => markPatternNote(patternIndex, ''), 400);
+  }
+
+  updateStats();
+}
+
+function flashKey(note) {
+  const el = document.querySelector(`.key[data-note="${note}"]`);
+  if (el) {
+    el.classList.add('active');
+    setTimeout(() => el.classList.remove('active'), 200);
+  }
+}
+
+// ── Metronome ──
+function startMetronome() {
+  metronomeIndex = 0;
+  beatStartTime = performance.now();
+
+  const interval = 60000 / bpm;
+  const dots = document.getElementById('metronome');
+  dots.innerHTML = '';
+  for (let i = 0; i < bpm; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'metro-dot';
+    dots.appendChild(dot);
+  }
+
+  metronomeInterval = setInterval(() => {
+    if (!isRunning) return;
+    const dots = document.querySelectorAll('.metro-dot');
+    dots.forEach(d => d.classList.remove('active'));
+    if (dots[metronomeIndex]) {
+      dots[metronomeIndex].classList.add('active');
+      playClick(1000, 0.03);
+    }
+    metronomeIndex = (metronomeIndex + 1) % Math.max(1, Math.min(bpm, 16));
+  }, interval);
+}
+
+function stopMetronome() {
+  if (metronomeInterval) {
+    clearInterval(metronomeInterval);
+    metronomeInterval = null;
+  }
+  document.querySelectorAll('.metro-dot').forEach(d => d.classList.remove('active'));
+}
+
+// ── UI ──
+function buildKalimba() {
+  const container = document.getElementById('kalimbaKeys');
+  container.innerHTML = '';
+  for (const n of KALIMBA_NOTES) {
+    const key = document.createElement('div');
+    key.className = 'key';
+    key.dataset.note = n.note;
+    key.innerHTML = `<span class="note-name">${n.note}</span><span class="freq">${n.freq.toFixed(0)}Hz</span>`;
+    key.addEventListener('mousedown', () => {
+      playNote(n.freq);
+      flashKey(n.note);
+    });
+    container.appendChild(key);
+  }
+}
+
+function buildPatternDisplay() {
+  const container = document.getElementById('patternNotes');
+  container.innerHTML = '';
+  currentPattern.forEach((note, i) => {
+    const span = document.createElement('span');
+    span.className = 'pattern-note';
+    span.id = `pn-${i}`;
+    span.textContent = note;
+    container.appendChild(span);
+  });
+  updatePatternHighlight();
+}
+
+function updatePatternHighlight() {
+  currentPattern.forEach((_, i) => {
+    const el = document.getElementById(`pn-${i}`);
+    if (!el) return;
+    el.classList.remove('current', 'done', 'wrong');
+    if (i === patternIndex) el.classList.add('current');
+    else if (i < patternIndex) el.classList.add('done');
+  });
+
+  const next = currentPattern[patternIndex];
+  document.getElementById('currentNote').textContent = next || '✓';
+
+  // Highlight the next key on the kalimba
+  document.querySelectorAll('.key.highlight').forEach(k => k.classList.remove('highlight'));
+  if (next) {
+    const keyEl = document.querySelector(`.key[data-note="${next}"]`);
+    if (keyEl) keyEl.classList.add('highlight');
+  }
+}
+
+function markPatternNote(index, cls) {
+  const el = document.getElementById(`pn-${index}`);
+  if (!el) return;
+  el.classList.remove('current', 'done', 'wrong');
+  if (cls) el.classList.add(cls);
+}
+
+function showFeedback(text, cls) {
+  const fb = document.getElementById('feedback');
+  fb.textContent = text;
+  fb.className = 'feedback ' + cls;
+}
+
+function updateStats() {
+  const acc = stats.hits > 0 ? Math.round((stats.onTime / stats.hits) * 100) : 0;
+  const avgDrift = stats.hits > 0 ? Math.round(stats.totalDrift / stats.hits) : 0;
+  const onTimePct = stats.hits > 0 ? Math.round((stats.onTime / stats.hits) * 100) : 0;
+
+  document.getElementById('statAccuracy').textContent = acc + '%';
+  document.getElementById('statAvgDrift').textContent = (avgDrift > 0 ? '+' : '') + avgDrift + 'ms';
+  document.getElementById('statOnTime').textContent = onTimePct + '%';
+  document.getElementById('statStreak').textContent = stats.streak;
+  document.getElementById('statTotal').textContent = stats.hits;
+
+  document.getElementById('levelFill').style.width = acc + '%';
+}
+
+function addHistory(note, drift, verdict) {
+  const list = document.getElementById('historyList');
+  const item = document.createElement('div');
+  item.className = 'history-item';
+
+  const driftClass = Math.abs(drift) < 100 ? 'zero' : Math.abs(drift) < 200 ? 'negative' : 'positive';
+  const driftStr = Math.abs(drift) > 0 ? (drift > 0 ? '+' : '') + drift + 'ms' : '±0ms';
+
+  item.innerHTML = `
+    <span class="hit-note">${note}</span>
+    <span class="drift ${driftClass}">${driftStr}</span>
+    <span class="verdict">${verdict}</span>
+  `;
+
+  list.insertBefore(item, list.firstChild);
+
+  // Keep max 50
+  while (list.children.length > 50) {
+    list.removeChild(list.lastChild);
+  }
+}
+
+function updateMicStatus(state) {
+  const el = document.getElementById('micStatus');
+  switch (state) {
+    case 'off': el.textContent = '🎤 Mic Off'; el.className = 'mic-status off'; break;
+    case 'on': el.textContent = '🎤 Listening'; el.className = 'mic-status on'; break;
+    case 'listening': el.textContent = '🎤 Listening...'; el.className = 'mic-status listening'; break;
+    case 'error': el.textContent = '🎤 Mic Error'; el.className = 'mic-status off'; break;
+  }
+}
+
+function resetPattern() {
+  patternIndex = 0;
+  beatStartTime = performance.now();
+  updatePatternHighlight();
+  showFeedback('', '');
+}
+
+// ── Controls ──
+function updateBPM(val) {
+  bpm = parseInt(val);
+  document.getElementById('bpmVal').textContent = bpm;
+  if (isRunning) {
+    stopMetronome();
+    startMetronome();
+  }
+}
+
+function selectPattern(val) {
+  if (PATTERNS[val]) {
+    currentPattern = PATTERNS[val];
+  }
+  resetPattern();
+  buildPatternDisplay();
+}
+
+function startPractice() {
+  if (isRunning) return;
+  initAudio();
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+
+  isRunning = true;
+  stats = { hits: 0, onTime: 0, totalDrift: 0, streak: 0, bestStreak: 0 };
+  patternIndex = 0;
+
+  document.getElementById('btnStart').style.display = 'none';
+  document.getElementById('btnStop').style.display = '';
+
+  startMic();
+  startMetronome();
+  updatePatternHighlight();
+  updateStats();
+  document.getElementById('historyList').innerHTML = '';
+  showFeedback('Play along!', '');
+}
+
+function stopPractice() {
+  isRunning = false;
+  stopMic();
+  stopMetronome();
+
+  document.getElementById('btnStart').style.display = '';
+  document.getElementById('btnStop').style.display = 'none';
+
+  document.querySelectorAll('.key.highlight').forEach(k => k.classList.remove('highlight'));
+  showFeedback('Stopped', '');
+}
+
+// ── Init ──
+buildKalimba();
+buildPatternDisplay();
+</script>
+</body>
+</html>

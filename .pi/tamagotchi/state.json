@@ -1,0 +1,23 @@
+{
+  "name": "Nibbles",
+  "hunger": 0,
+  "energy": 0,
+  "cleanliness": 0,
+  "happiness": 12,
+  "sleeping": false,
+  "mood": "tired",
+  "thought": "Long run. Maybe recharge next turn.",
+  "lastUpdatedAt": 1780255623884,
+  "lastActionAt": 1780240057755,
+  "lastUserIntent": "The microphone doesn't appear to be detecting anything. I'm getting no indication of signal",
+  "recentActions": [
+    "tool:edit",
+    "tool:read",
+    "tool:read",
+    "tool:edit",
+    "tool:bash",
+    "tool:read",
+    "tool:edit",
+    "tool:bash"
+  ]
+}
